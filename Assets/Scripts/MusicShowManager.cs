@@ -1,17 +1,23 @@
 ﻿using UnityEngine;
 using System.Collections;
-using UnityEditor;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class MusicShowManager : MonoBehaviour
 {
 	public Image image;
+	public Image imageFade;
+	public Text text;
+	[Range(0, 0.5f)]
+	public float relativeFadeSpeed = 0.1f;
 	public AudioSource audioSource;
 	public int[] years;
 	public float minDuration = 5f;
 	public float maxDuration = 10f;
 	private int yearID = -1;
 	private MusicShow currentMusicShow;
+	private float fadeTime;
+	private float normSpriteDuration;
 
 
 	private void Start ()
@@ -21,13 +27,53 @@ public class MusicShowManager : MonoBehaviour
 	}
 
 
-	private IEnumerator Show()
+	private IEnumerator ShowText()
 	{
+		image.enabled = false;
+		imageFade.enabled = false;
+		text.text = currentMusicShow.year.ToString();
+		fadeTime = currentMusicShow.DurationPerSprite() * relativeFadeSpeed;
+		normSpriteDuration = currentMusicShow.DurationPerSprite() - (fadeTime * 2);
+
+		for (float t = 0; t <= 1; t += fadeTime*Time.deltaTime)
+		{
+			text.color = Color.Lerp(Color.clear, Color.white, t);
+			yield return null;
+		}
+
+		yield return new WaitForSeconds( normSpriteDuration );
+
+		for (float t = 0; t <= 1; t += fadeTime * Time.deltaTime)
+		{
+			text.color = Color.Lerp ( Color.white, Color.clear, t );
+			yield return null;
+		}
+		imageFade.enabled = true;
+		StartCoroutine (ShowSprites());
+	}
+
+
+	private IEnumerator ShowSprites()
+	{
+		var ti = Time.time;
 		var sprite = currentMusicShow.GetNextSprite();
 		if ( sprite == null ) yield break;
+		imageFade.sprite = sprite;
+
+		for (float t=0; t <= 1; t += fadeTime * Time.deltaTime)
+		{
+			image.color = Color.Lerp(Color.white, Color.clear, t);
+			imageFade.color = Color.Lerp(Color.clear, Color.white, t);
+			yield return null;
+		}
+		image.enabled = true;
 		image.sprite = sprite;
-		yield return new WaitForSeconds( currentMusicShow.DurationPerSprite() );
-		StartCoroutine( Show() );
+		image.color = Color.white;
+		imageFade.color = Color.clear;
+		yield return new WaitForSeconds( normSpriteDuration );
+		ti -= Time.time;
+		Debug.Log("Time needed: " + ti);
+		StartCoroutine( ShowSprites() );
 	}
 
 
@@ -59,7 +105,7 @@ public class MusicShowManager : MonoBehaviour
 
 			StopAllCoroutines ();
 			StartCoroutine ( Play () );
-			StartCoroutine ( Show () );
+			StartCoroutine ( ShowText() );
 
 			Debug.Log ( "Year: " + years[yearID] + "  Duration: " + currentMusicShow.Duration + "s" + "  Duration per sprite: " + currentMusicShow.DurationPerSprite() + "s" );
 			if (currentMusicShow.DurationPerSprite() < minDuration)
@@ -79,6 +125,7 @@ public class MusicShowManager : MonoBehaviour
 
 	private void OnEnd()
 	{
-		Debug.Log("All Done");
+		Debug.Log("Reload");
+		SceneManager.LoadScene(0);
 	}
 }

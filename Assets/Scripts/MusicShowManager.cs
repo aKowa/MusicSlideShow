@@ -8,16 +8,13 @@ public class MusicShowManager : MonoBehaviour
 	public Image image;
 	public Image imageFade;
 	public Text text;
-	[Range(0, 0.5f)]
-	public float relativeFadeSpeed = 0.1f;
 	public AudioSource audioSource;
 	public int[] years;
 	public float minDuration = 5f;
 	public float maxDuration = 10f;
 	private int yearID = -1;
 	private MusicShow currentMusicShow;
-	private float fadeTime;
-	private float normSpriteDuration;
+	private float spriteDuration;
 
 
 	private void Start ()
@@ -30,49 +27,21 @@ public class MusicShowManager : MonoBehaviour
 	private IEnumerator ShowText()
 	{
 		image.enabled = false;
-		imageFade.enabled = false;
+		text.enabled = true;
 		text.text = currentMusicShow.year.ToString();
-		fadeTime = currentMusicShow.DurationPerSprite() * relativeFadeSpeed;
-		normSpriteDuration = currentMusicShow.DurationPerSprite() - (fadeTime * 2);
-
-		for (float t = 0; t <= 1; t += fadeTime*Time.deltaTime)
-		{
-			text.color = Color.Lerp(Color.clear, Color.white, t);
-			yield return null;
-		}
-
-		yield return new WaitForSeconds( normSpriteDuration );
-
-		for (float t = 0; t <= 1; t += fadeTime * Time.deltaTime)
-		{
-			text.color = Color.Lerp ( Color.white, Color.clear, t );
-			yield return null;
-		}
-		imageFade.enabled = true;
+		yield return new WaitForSeconds( spriteDuration );
+		image.enabled = true;
+		text.enabled = false;
 		StartCoroutine (ShowSprites());
 	}
 
 
 	private IEnumerator ShowSprites()
 	{
-		var ti = Time.time;
 		var sprite = currentMusicShow.GetNextSprite();
 		if ( sprite == null ) yield break;
-		imageFade.sprite = sprite;
-
-		for (float t=0; t <= 1; t += fadeTime * Time.deltaTime)
-		{
-			image.color = Color.Lerp(Color.white, Color.clear, t);
-			imageFade.color = Color.Lerp(Color.clear, Color.white, t);
-			yield return null;
-		}
-		image.enabled = true;
 		image.sprite = sprite;
-		image.color = Color.white;
-		imageFade.color = Color.clear;
-		yield return new WaitForSeconds( normSpriteDuration );
-		ti -= Time.time;
-		Debug.Log("Time needed: " + ti);
+		yield return new WaitForSeconds( spriteDuration );
 		StartCoroutine( ShowSprites() );
 	}
 
@@ -102,17 +71,18 @@ public class MusicShowManager : MonoBehaviour
 			var sprites = (Sprite[])Resources.LoadAll<Sprite> ( years[yearID].ToString () );
 			var clips = (AudioClip[])Resources.LoadAll<AudioClip> ( years[yearID].ToString () );
 			currentMusicShow = new MusicShow ( clips, sprites, years[yearID] );
+			spriteDuration = currentMusicShow.DurationPerSprite ();
 
 			StopAllCoroutines ();
 			StartCoroutine ( Play () );
 			StartCoroutine ( ShowText() );
 
-			Debug.Log ( "Year: " + years[yearID] + "  Duration: " + currentMusicShow.Duration + "s" + "  Duration per sprite: " + currentMusicShow.DurationPerSprite() + "s" );
-			if (currentMusicShow.DurationPerSprite() < minDuration)
+			Debug.Log ( "Year: " + years[yearID] + "  Duration: " + currentMusicShow.Duration + "s" + "  Duration per sprite: " + spriteDuration + "s" );
+			if (spriteDuration < minDuration)
 			{
 				Debug.LogError("Duration per sprite too low. Use less sprites or longer music!");
 			}
-			else if ( currentMusicShow.DurationPerSprite() > maxDuration )
+			else if (spriteDuration > maxDuration )
 			{
 				Debug.LogError ( "Duration per sprite too high. Use more sprites or shorten music!" );
 			}

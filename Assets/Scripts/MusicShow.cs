@@ -31,7 +31,7 @@ public class MusicShow
 
 	public float DurationPerSprite()
 	{
-		return Duration / (sprites.Length + 1);
+		return Duration / sprites.Length;
 	}
 
 

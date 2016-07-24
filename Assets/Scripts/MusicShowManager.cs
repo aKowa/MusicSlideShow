@@ -24,18 +24,6 @@ public class MusicShowManager : MonoBehaviour
 	}
 
 
-	private IEnumerator ShowText()
-	{
-		image.enabled = false;
-		text.enabled = true;
-		text.text = currentMusicShow.year.ToString();
-		yield return new WaitForSeconds( spriteDuration );
-		image.enabled = true;
-		text.enabled = false;
-		StartCoroutine (ShowSprites());
-	}
-
-
 	private IEnumerator ShowSprites()
 	{
 		var sprite = currentMusicShow.GetNextSprite();
@@ -70,12 +58,26 @@ public class MusicShowManager : MonoBehaviour
 		{
 			var sprites = (Sprite[])Resources.LoadAll<Sprite> ( years[yearID].ToString () );
 			var clips = (AudioClip[])Resources.LoadAll<AudioClip> ( years[yearID].ToString () );
+
+			if ( clips.Length == 0 )
+			{
+				Debug.LogError( "No clips found. Not formatted?" );
+				return;
+			}
+			else if ( sprites.Length == 0 )
+			{
+				Debug.LogError ( "No sprites found. Not formatted?" );
+				return;
+			}
+
 			currentMusicShow = new MusicShow ( clips, sprites, years[yearID] );
 			spriteDuration = currentMusicShow.DurationPerSprite ();
 
 			StopAllCoroutines ();
+			text.text = currentMusicShow.year.ToString () + "-" + (currentMusicShow.year + 10).ToString();
 			StartCoroutine ( Play () );
-			StartCoroutine ( ShowText() );
+
+			StartCoroutine ( ShowSprites() );
 
 			Debug.Log ( "Year: " + years[yearID] + "  Duration: " + currentMusicShow.Duration + "s" + "  Duration per sprite: " + spriteDuration + "s" );
 			if (spriteDuration < minDuration)
@@ -95,7 +97,7 @@ public class MusicShowManager : MonoBehaviour
 
 	private void OnEnd()
 	{
-		Debug.Log("Reload");
-		SceneManager.LoadScene(0);
+		Debug.Log("End");
+		SceneManager.LoadScene(1);
 	}
 }
